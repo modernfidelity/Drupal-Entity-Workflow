@@ -208,7 +208,7 @@ function entity_workflow_tokens($type, $tokens, array $data = array(), array $op
           elseif (!isset($node->workflow) && empty($last_history->sid)) {
             // If the state is not specified and the node has no workflow history,
             // the node is being inserted and will soon be transitioned to the first valid state.
-            // We find this state using the same logic as entity_workflow_nodeapi().
+            // We find this state using the same logic as entity_workflow_entityapi().
             $choices = entity_workflow_field_choices($node);
             $keys = array_keys($choices);
             $sid = array_shift($keys);
@@ -726,8 +726,8 @@ function entity_workflow_execute_transition($node, $sid, $comment = NULL, $force
     'uid' => $user->uid,
     'stamp' => REQUEST_TIME,
   );
-  // entity_workflow_update_entity_workflow_node places a history comment as well.
-  entity_workflow_update_entity_workflow_node($data, $old_sid, $comment);
+  // entity_workflow_update_entity_workflow_entity places a history comment as well.
+  entity_workflow_update_entity_workflow_entity($data, $old_sid, $comment);
   $node->workflow = $sid;
   // Register state change with watchdog.
   $type = node_type_get_name($node->type);
@@ -922,7 +922,7 @@ function entity_workflow_get_workflows_by_name($name, $unserialize_options = FAL
  */
 function entity_workflow_delete_workflows_by_wid($wid) {
   // Notify any interested modules before we delete, in case there's data needed.
-  module_invoke_all('workflow', 'workflow delete', $wid, NULL, NULL);
+  module_invoke_all('entity_workflow', 'workflow delete', $wid, NULL, NULL);
   // Delete associated state (also deletes any associated transitions).
   foreach (entity_workflow_get_entity_workflow_states_by_wid($wid) as $data) {
     entity_workflow_delete_entity_workflow_states_by_sid($data->sid);
@@ -930,15 +930,17 @@ function entity_workflow_delete_workflows_by_wid($wid) {
   // Delete type map.
   entity_workflow_delete_entity_workflow_type_map_by_wid($wid);
   // Delete the workflow.
-  db_delete('workflows')->condition('wid', $wid)->execute();
+  db_delete('entity_workflows')->condition('wid', $wid)->execute();
   // Workflow deletion affects tabs (local tasks), so force menu rebuild.
   cache_clear_all('*', 'cache_menu', TRUE);
+  
   menu_rebuild();
 }
 
 /**
  * Given information, update or insert a new workflow. Returns data by ref. (like node_save).
  */
+
 function entity_workflow_update_workflows(&$data, $create_creation_state = TRUE) {
   
   $data = (object) $data;
@@ -948,6 +950,10 @@ function entity_workflow_update_workflows(&$data, $create_creation_state = TRUE)
   }
   
   if (isset($data->wid) && count(entity_workflow_get_workflows_by_wid($data->wid)) > 0) {
+    
+    //print_r($data);
+    //exit;
+    
     drupal_write_record('entity_workflows', $data, 'wid');
   }
   else {
@@ -1223,7 +1229,7 @@ function entity_workflow_delete_entity_workflow_states_by_sid($sid, $new_sid = F
         'uid' => $user->uid,
         'stamp' => $node->entity_workflow_stamp,
       );
-      entity_workflow_update_entity_workflow_node($data, $sid, t('Previous state deleted'));
+      entity_workflow_update_entity_workflow_entity($data, $sid, t('Previous state deleted'));
     }
   }
   // Find out which transitions this state is involved in.
@@ -1406,14 +1412,14 @@ function entity_workflow_insert_entity_workflow_entity_history($data) {
 }
 
 /**
- * Functions related to table entity_workflow_node.
+ * Functions related to table entity_workflow_entity.
  */
 
 /**
  * Given a node id, find out what it's current state is. Unique (for now).
  */
 function entity_workflow_get_entity_workflow_entity_by_nid($nid) {
-  $results = db_query('SELECT * FROM {entity_workflow_node} WHERE nid = :nid', array(':nid' => $nid));
+  $results = db_query('SELECT * FROM {entity_workflow_entity} WHERE nid = :nid', array(':nid' => $nid));
   return $results->fetchObject();
 }
 
@@ -1421,7 +1427,7 @@ function entity_workflow_get_entity_workflow_entity_by_nid($nid) {
  * Given a sid, find out the nodes associated.
  */
 function entity_workflow_get_entity_workflow_entity_by_sid($sid) {
-  $results = db_query('SELECT * FROM {entity_workflow_node} WHERE sid = :sid', array(':sid' => $sid));
+  $results = db_query('SELECT * FROM {entity_workflow_entity} WHERE sid = :sid', array(':sid' => $sid));
   return $results->fetchAll();
 }
 
@@ -1429,40 +1435,40 @@ function entity_workflow_get_entity_workflow_entity_by_sid($sid) {
  * Given nid, update the new stamp. This probably can be refactored. Called by entity_workflow_execute_transition().
  */
 function entity_workflow_update_entity_workflow_entity_stamp($nid, $new_stamp) { // TODO refactor into a correct insert / update.
-  return db_update('entity_workflow_node')->fields(array('stamp' => $new_stamp,))->condition('nid', $nid, '=')->execute();
+  return db_update('entity_workflow_entity')->fields(array('stamp' => $new_stamp,))->condition('nid', $nid, '=')->execute();
 }
 
 /**
  * Given data, update the new user account.  Called by user_delete().
  */
 function entity_workflow_update_entity_workflow_entity_uid($uid, $new_uid) {
-  return db_update('entity_workflow_node')->fields(array('uid' => $new_uid,))->condition('uid', $uid, '=')->execute();
+  return db_update('entity_workflow_entity')->fields(array('uid' => $new_uid,))->condition('uid', $uid, '=')->execute();
 }
 
 /**
  * Given nid, delete associated workflow data.
  */
 function entity_workflow_delete_entity_workflow_entity_by_nid($nid) {
-  return db_delete('entity_workflow_node')->condition('nid', $nid)->execute();
+  return db_delete('entity_workflow_entity')->condition('nid', $nid)->execute();
 }
 
 /**
  * Given sid, delete associated workflow data.
  */
 function entity_workflow_delete_entity_workflow_entity_by_sid($sid) {
-  return db_delete('entity_workflow_node')->condition('sid', $sid)->execute();
+  return db_delete('entity_workflow_entity')->condition('sid', $sid)->execute();
 }
 
 /**
  * Given data, insert the node association.
  */
-function entity_workflow_update_entity_workflow_node($data, $old_sid, $comment = NULL) {
+function entity_workflow_update_entity_workflow_entity($data, $old_sid, $comment = NULL) {
   $data = (object) $data;
   if (isset($data->nid) && entity_workflow_get_entity_workflow_entity_by_nid($data->nid)) {
-    drupal_write_record('entity_workflow_node', $data, 'nid');
+    drupal_write_record('entity_workflow_entity', $data, 'nid');
   }
   else {
-    drupal_write_record('entity_workflow_node', $data);
+    drupal_write_record('entity_workflow_entity', $data);
   }
   // Write to history for this node.
   $data = array(

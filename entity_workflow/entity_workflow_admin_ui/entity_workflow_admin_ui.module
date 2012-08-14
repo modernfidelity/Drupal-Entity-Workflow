@@ -16,15 +16,15 @@ define('ENTITY_WORKFLOW_ARROW', '&#8594;');
  */
 function entity_workflow_admin_ui_help($path, $arg) {
   switch ($path) {
-    case 'admin/config/entity-workflow/entity-workflow/edit/%':
+    case 'admin/config/workflow/entity-workflow/edit/%':
       return t('You are currently viewing the possible transitions to and from workflow states. The state is shown in the left column; ' .
       'the state to be moved to is to the right. For each transition, check the box next to the role(s) that may initiate the transition. ' .
       'For example, if only the "production editor" role may move a node from Review state to the Published state, check the box next to ' .
       '"production editor". The author role is built in and refers to the user who authored the node.');
-    case 'admin/config/entity-workflow/entity-workflow/add':
+    case 'admin/config/workflow/entity-workflow/add':
       return t('To get started, provide a name for your workflow. This name will be used as a label when the workflow status is shown ' .
-      'during node editing.');
-    case 'admin/config/entity-workflow/entity-workflow/state':
+      'during editing.');
+    case 'admin/config/workflow/entity-workflow/state':
       return t('Enter the name for a state in your workflow. For example, if you were doing a meal workflow it may include states like ' .
       '<em>shop</em>, <em>prepare</em>, <em>eat</em>, and <em>clean up</em>.');
   }
@@ -67,7 +67,7 @@ function entity_workflow_admin_ui_menu() {
     'page arguments' => array('entity_workflow_admin_ui_add_form'),
     'type' => MENU_LOCAL_TASK,
   );
-  $items['admin/config/entity-workflow/entity-workflow/edit'] = array(
+  $items['admin/config/workflow/entity-workflow/edit'] = array(
     'title' => 'Edit workflow',
     'type' => MENU_LOCAL_TASK,
     'context' => MENU_CONTEXT_INLINE,
@@ -190,14 +190,14 @@ function entity_workflow_admin_ui_add_form_submit($form, &$form_state) {
 
   entity_workflow_update_workflows($workflow);
   
-  watchdog('workflow', 'Created workflow %name', array('%name' => $workflow->name));
+  watchdog('entity workflow', 'Created workflow %name', array('%name' => $workflow->name));
   
   drupal_set_message(t('The workflow %name was created. You should now add states to your workflow.',
     array('%name' => $workflow->name)), 'status');
   
   $form_state['wid'] = $workflow->wid;
   
-  $form_state['redirect'] = 'admin/config/entity-workflow/entity-workflow/state/' . $workflow->wid;
+  $form_state['redirect'] = 'admin/config/workflow/entity-workflow/state/' . $workflow->wid;
   
 }
 
@@ -224,14 +224,14 @@ function entity_workflow_admin_ui_delete_form($form, &$form_state, $wid, $sid = 
       $form,
       t('Are you sure you want to delete %title? All nodes that have a workflow state associated with this workflow will ' .
         'have those workflow states removed.', array('%title' => $workflow->name)),
-      !empty($_GET['destination']) ? $_GET['destination'] : 'admin/config/entity-workflow/entity-workflow',
+      !empty($_GET['destination']) ? $_GET['destination'] : 'admin/config/workflow/entity-workflow',
       t('This action cannot be undone.'),
       t('Delete'),
       t('Cancel')
     );
   }
   else {
-    drupal_got('admin/config/entity-workflow/entity-workflow');
+    drupal_got('admin/config/workflow/entity-workflow');
   }
 }
 
@@ -245,7 +245,7 @@ function entity_workflow_admin_ui_delete_form_submit($form, &$form_state) {
     entity_workflow_delete_workflows_by_wid($form_state['values']['wid']);
     watchdog('workflow', 'Deleted workflow %name with all its states', array('%name' => $workflow->name));
     drupal_set_message(t('The workflow %name with all its states was deleted.', array('%name' => $workflow->name)));
-    $form_state['redirect'] = 'admin/config/entity-workflow/entity-workflow';
+    $form_state['redirect'] = 'admin/config/workflow/entity-workflow';
   }
 }
 
@@ -275,7 +275,7 @@ function entity_workflow_admin_ui_view_permissions($wid) {
       array(':wid' => $wid));
     foreach ($result as $data) {
       foreach (explode(',', $data->roles) as $role) {
-        $all[$role]['transitions'][] = array(check_plain(t($data->state_name)), entity_workflow_ARROW, check_plain(t($data->target_state_name)));
+        $all[$role]['transitions'][] = array(check_plain(t($data->state_name)), ENTITY_WORKFLOW_ARROW, check_plain(t($data->target_state_name)));
       }
     }
     $header = array(t('From'), '', t('To'));
@@ -295,7 +295,7 @@ function entity_workflow_admin_ui_view_permissions($wid) {
     return theme('entity_workflow_admin_ui_view_permissions', array('header' => $header, 'all' => $all));
   }
   else {
-    drupal_got('admin/config/entity-workflow/entity-workflow');
+    drupal_got('admin/config/workflow/entity-workflow');
   }
 }
 
@@ -329,7 +329,7 @@ function theme_entity_workflow_admin_ui_view_permissions($variables) {
  *   HTML form and permissions table.
  */
 function entity_workflow_admin_ui_edit_form($form, $form_state, $wid) {
-  // If we don't have a wid by this point, we need to go back to creating one at admin/config/entity-workflow/entity-workflow/add
+  // If we don't have a wid by this point, we need to go back to creating one at admin/config/workflow/entity-workflow/add
   if ($workflow = entity_workflow_get_workflows_by_wid($wid)) {
     $form['wid'] = array(
       '#type' => 'value',
@@ -401,7 +401,7 @@ function entity_workflow_admin_ui_edit_form($form, $form_state, $wid) {
     return $form;
   }
   else {
-    drupal_goto('admin/config/entity-workflow/entity-workflow/add');
+    drupal_goto('admin/config/workflow/entity-workflow/add');
   }
 }
 
@@ -420,7 +420,7 @@ function theme_entity_workflow_admin_ui_edit_form($variables) {
     $states = entity_workflow_get_entity_workflow_states_by_wid($wid, array('status' => 1));
     if ($states) {
       $roles = entity_workflow_admin_ui_get_roles();
-      $header = array(array('data' => t('From / To') . ' &nbsp;' . entity_workflow_ARROW));
+      $header = array(array('data' => t('From / To') . ' &nbsp;' . ENTITY_WORKFLOW_ARROW));
       $rows = array();
       foreach ($states as $state) {
         $state_id = $state->sid;
@@ -462,7 +462,7 @@ function theme_entity_workflow_admin_ui_edit_form($variables) {
     return $output;
   }
   else {
-    drupal_got('admin/config/entity-workflow/entity-workflow');
+    drupal_got('admin/config/workflow/entity-workflow');
   }
 }
 
@@ -472,15 +472,24 @@ function theme_entity_workflow_admin_ui_edit_form($variables) {
  * @see entity_workflow_edit_form()
  */
 function entity_workflow_admin_ui_edit_form_validate($form_id, $form_state) {
+  
   $wid = $form_state['values']['wid'];
   // Make sure workflow name is not a duplicate.
   if (array_key_exists('wf_name', $form_state['values']) && $form_state['values']['wf_name'] != '') {
+  
     $entity_workflow_name = $form_state['values']['wf_name'];
+    
     $workflows = array();
+    
     foreach (entity_workflow_get_workflows() as $data) {
+      
       $workflows[$data->wid] = check_plain(t($data->name));
+    
+      
     }
+    
     $workflows = array_flip($workflows);
+    
     if (array_key_exists($entity_workflow_name, $workflows) && $wid != $workflows[$entity_workflow_name]) {
       form_set_error('wf_name', t('A workflow with the name %name already exists. Please enter another name for this workflow.',
         array('%name' => $entity_workflow_name)));
@@ -513,23 +522,31 @@ function entity_workflow_admin_ui_edit_form_validate($form_id, $form_state) {
  * @see entity_workflow_edit_form()
  */
 function entity_workflow_admin_ui_edit_form_submit($form, &$form_state) {
+  
   if (isset($form_state['values']['transitions'])) {
     entity_workflow_update_transitions($form_state['values']['transitions']);
   }
+  
   $options = array(
     'comment_log_node' => $form_state['values']['comment_log_node'],
     'comment_log_tab' => $form_state['values']['comment_log_tab'],
     'name_as_title' => $form_state['values']['name_as_title'],
   );
+  
   $workflow = array(
     'wid' => $form_state['values']['wid'],
     'name' => $form_state['values']['wf_name'],
     'tab_roles' =>  array_filter($form_state['values']['tab_roles']),
     'options' => serialize($options),
   );
+  
+  
   entity_workflow_update_workflows($workflow);
+  
   drupal_set_message(t('The workflow was updated.'));
-  $form_state['redirect'] = 'admin/config/entity-workflow/entity-workflow';
+  
+  $form_state['redirect'] = 'admin/config/workflow/entity-workflow';
+  
 }
 
 /**
@@ -764,7 +781,7 @@ function entity_workflow_admin_ui_overview() {
     $output .= drupal_render(drupal_get_form('entity_workflow_admin_ui_types_form'));
   }
   else {
-    $output = '<p>' . t('No workflows have been added. Would you like to <a href="@link">add a workflow</a>?', array('@link' => url('admin/config/entity-workflow/entity-workflow/add'))) . '</p>';
+    $output = '<p>' . t('No workflows have been added. Would you like to <a href="@link">add a workflow</a>?', array('@link' => url('admin/config/workflow/entity-workflow/add'))) . '</p>';
   }
   return $output;
 }
@@ -830,7 +847,7 @@ function entity_workflow_admin_ui_state_delete_form($form, $form_state, $wid, $s
   return confirm_form(
     $form,
     t('Are you sure you want to delete %title (and all its transitions)?', array('%title' => $delete_state->state)),
-    !empty($_GET['destination']) ? $_GET['destination'] : 'admin/config/entity-workflow/entity-workflow',
+    !empty($_GET['destination']) ? $_GET['destination'] : 'admin/config/workflow/entity-workflow',
     t('This action cannot be undone.'),
     t('Delete'),
     t('Cancel')
@@ -849,7 +866,7 @@ function entity_workflow_admin_ui_state_delete_form_submit($form, &$form_state) 
     watchdog('workflow', 'Deleted workflow state %name', array('%name' => $state->state));
     drupal_set_message(t('The workflow state %name was deleted.', array('%name' => $state->state)));
   }
-  $form_state['redirect'] = 'admin/config/entity-workflow/entity-workflow';
+  $form_state['redirect'] = 'admin/config/workflow/entity-workflow';
 }
 
 /**
@@ -927,7 +944,7 @@ function entity_workflow_admin_ui_types_form_submit($form, &$form_state) {
   entity_workflow_types_save($form_state['values']);
   drupal_set_message(t('The workflow mapping was saved.'));
   menu_rebuild();
-  $form_state['redirect'] = 'admin/config/entity-workflow/entity-workflow';
+  $form_state['redirect'] = 'admin/config/workflow/entity-workflow';
 }
 
 /**
