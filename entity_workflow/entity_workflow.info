@@ -1,0 +1,7 @@
+name = Entity Workflow
+description = "Allows the creation and assignment of arbitrary workflows to entity types."
+
+package = Entity Workflow
+
+version = "7.x-1.0-dev"
+core = 7.x
