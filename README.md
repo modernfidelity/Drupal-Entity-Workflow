@@ -7,7 +7,7 @@ Provides a non-production development branch of an entity workflow module for Dr
 
 This is straight ahead of copy the excellent Workflow module by John VanDyk, with the idea of converting it over to work with Entities and not only just Nodes...
 
-Insane possibily, but we have deadlines ;)
+Insane possibly, but we have deadlines ;)
 
 -------------------------------------------------------
 
