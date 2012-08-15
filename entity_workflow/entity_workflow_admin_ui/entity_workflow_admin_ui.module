@@ -980,11 +980,8 @@ function entity_workflow_types_save($form_values) {
 
   entity_workflow_delete_entity_workflow_type_map_all();
 
-
-  // @todo -- replace with entity types
-  $node_types = node_type_get_types();
-
-  foreach ($node_types as $type => $name) {
+  $entities = entity_get_info();
+  foreach ($entities as $type => $entity) {
     $data = array(
       'type' => $type,
       'wid' => $form_values[$type]['workflow'],
