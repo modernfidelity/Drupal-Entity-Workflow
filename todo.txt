@@ -15,7 +15,7 @@ Start this today
 7. Housekeeping:
 
 - Constants - all upper case, currently: 'entity_workflow_CREATION'
-- Crud/Helpers tidy up - order, replace nids with eids etc etc
+- Crud/Helpers tidy up - order, replace nids with eids, $node with $entity etc etc
 - DB schema tidy up - replace nids with eids etc etc
 
 
