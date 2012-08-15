@@ -306,27 +306,37 @@ function entity_workflow_token_info() {
 }
 
 /**
- * Node specific functions, remants of nodeapi.
+ * Entity specific functions
  */
 
 /**
  * Implements hook_node_load(). Consider replacing with hook_entity_load().
  */
-function entity_workflow_entity_load($nodes, $types) {
-  foreach ($nodes as $node) {
+function entity_workflow_entity_load($entities, $type) {
+
+  foreach ($entities as $entity) {
+
+    $entity->entity_workflow_entity_type = $type;
+
     // ALERT: With the upgrade to Drupal 7, values stored on the node as _entity_workflow_x
     // have been standardized to entity_workflow_x, dropping the initial underscore.
     // Module maintainers integrating with workflow should keep that in mind.
-    $node->workflow = entity_workflow_entity_current_state($node);
+    $entity->workflow = entity_workflow_entity_current_state($entity);
+
+    // I have had to manually set the entity's type here as I cannot find any other way to access this property
+
     // Add scheduling information.
     // Technically you could have more than one scheduled, but this will only add the soonest one.
-    foreach (entity_workflow_get_entity_workflow_scheduled_transition_by_nid($node->nid) as $row) {
-      $node->entity_workflow_scheduled_sid = $row->sid;
-      $node->entity_workflow_scheduled_timestamp = $row->scheduled;
-      $node->entity_workflow_scheduled_comment = $row->comment;
+
+    // @todo replace this with entity id (update the schema also)
+    /*foreach (entity_workflow_get_entity_workflow_scheduled_transition_by_nid($entity->nid) as $row) {
+      $entity->entity_workflow_scheduled_sid = $row->sid;
+      $entity->entity_workflow_scheduled_timestamp = $row->scheduled;
+      $entity->entity_workflow_scheduled_comment = $row->comment;
       break;
-    }
+    }*/
   }
+
 }
 
 /**
@@ -433,7 +443,7 @@ function entity_workflow_features_api() {
 /**
  * Business related functions, the API.
  */
- 
+
 /**
  * Validate target state and either execute a transition immediately or schedule
  * a transition to be executed later by cron.
@@ -781,30 +791,44 @@ function entity_workflow_field_choices($node) {
 }
 
 /**
- * Get the current state of a given node.
+ * Get the current state of a given entity. If this entity
+ * has not moved into one of the states available to it yet.
+ * just return the id of the creation state.
  *
- * @param $node
- *   The node to check.
+ * @param $entity
+ *   The Entity to check.
  * @return
  *   The ID of the current state.
  */
-function entity_workflow_entity_current_state($node) {
+function entity_workflow_entity_current_state($entity) {
+
   $sid = FALSE;
   $state = FALSE;
-  // There is no nid when creating a node.
-  if (!empty($node->nid)) {
-    $state = entity_workflow_get_entity_workflow_entity_by_nid($node->nid);
-    if($state){  
+
+  // given an entity id, find out what its current state is
+  $entity_id = entity_workflow_get_entity_id($entity);
+  $type = $entity->entity_workflow_entity_type;
+
+  if (!empty($entity_id)) {
+
+    $state = entity_workflow_get_workflow_entity_by_id($entity_id);
+
+    if ($state) {
+
       $sid = $state->sid;
     }
   }
-  if (!$state && !empty($node->type)) {
+  if (!$state && !empty($type)) {
+
     // No current state. Use creation state.
-    if( $workflow = entity_workflow_get_entity_workflow_type_map_by_type($node->type)) {
+    if ( $workflow = entity_workflow_get_entity_workflow_type_map_by_type($type)) {
+
       $sid = entity_workflow_get_creation_state_by_wid($workflow->wid);
     }
   }
+
   return $sid;
+
 }
 
 function entity_workflow_entity_previous_state($node) {
@@ -854,6 +878,7 @@ function entity_workflow_transition_allowed($tid, $role = NULL) {
  *   The ID of the workflow.
  */
 function entity_workflow_get_creation_state_by_wid($wid) {
+
   $options = array(':sysid' => entity_workflow_CREATION);
   $result = entity_workflow_get_entity_workflow_states_by_wid($wid, $options);
   return isset($result[0]->sid) ? $result[0]->sid : 0;
@@ -874,7 +899,7 @@ function entity_workflow_get_creation_state_by_wid($wid) {
 
 /**
  * Get all workflows.
- */ 
+ */
 function entity_workflow_get_workflows() {
   $results = db_query('SELECT * FROM {entity_workflows}');
   $workflows = $results->fetchAll();
@@ -888,9 +913,9 @@ function entity_workflow_get_workflows() {
  * Get a specific workflow, wid is a unique ID.
  */
 function entity_workflow_get_workflows_by_wid($wid, $unserialize_options = TRUE) {
-  
+
   $results = db_query('SELECT * FROM {entity_workflows} WHERE wid = :wid', array(':wid' => $wid));
-  
+
   if ($workflow = $results->fetchObject()) {
     if ($unserialize_options) {
       $workflow->options = unserialize($workflow->options);
@@ -933,7 +958,7 @@ function entity_workflow_delete_workflows_by_wid($wid) {
   db_delete('entity_workflows')->condition('wid', $wid)->execute();
   // Workflow deletion affects tabs (local tasks), so force menu rebuild.
   cache_clear_all('*', 'cache_menu', TRUE);
-  
+
   menu_rebuild();
 }
 
@@ -942,33 +967,33 @@ function entity_workflow_delete_workflows_by_wid($wid) {
  */
 
 function entity_workflow_update_workflows(&$data, $create_creation_state = TRUE) {
-  
+
   $data = (object) $data;
-  
+
   if (isset($data->tab_roles) && is_array($data->tab_roles)) {
     $data->tab_roles = implode(',', $data->tab_roles);
   }
-  
+
   if (isset($data->wid) && count(entity_workflow_get_workflows_by_wid($data->wid)) > 0) {
-    
+
     //print_r($data);
     //exit;
-    
+
     drupal_write_record('entity_workflows', $data, 'wid');
   }
   else {
-    
+
     drupal_write_record('entity_workflows', $data);
-    
+
     if ($create_creation_state) {
-      
+
       $state_data = array(
         'wid' => $data->wid,
         'state' => t('(creation)'),
         'sysid' => ENTITY_WORKFLOW_CREATION,
         'weight' => ENTITY_WORKFLOW_CREATION_DEFAULT_WEIGHT,
         );
-      
+
       entity_workflow_update_entity_workflow_states($state_data);
       // TODO consider adding state data to return here as part of workflow data structure.
       // That way we could past sructs and transitions around as a data boject as a whole.
@@ -982,7 +1007,7 @@ function entity_workflow_update_workflows(&$data, $create_creation_state = TRUE)
 /**
  * Functions related to table entity_workflow_type_map.
  */
- 
+
 /**
  * Get all entity_workflow_type_map.
  */
@@ -1037,21 +1062,21 @@ function entity_workflow_delete_entity_workflow_type_map_by_type($type) {
  * Given information, insert a new entity_workflow_type_map. Returns data by ref. (like node_save).
  */
 function entity_workflow_insert_entity_workflow_type_map(&$data) {
-  
+
   $data = (object) $data;
   // Be sure we have a clean insert. There should never be more than one map for a type.
   if (isset($data->type)) {
     entity_workflow_delete_entity_workflow_type_map_by_type($data->type);
   }
-  
+
   drupal_write_record('entity_workflow_type_map', $data);
-  
+
 }
 
 /**
  * Functions related to table entity_workflow_transitions.
  */
- 
+
 /**
  * Given a tid, get the transition. It is a unique object, only one return.
  */
@@ -1151,7 +1176,7 @@ function entity_workflow_update_entity_workflow_transitions_roles($tid, $roles) 
 /**
  * Functions related to table entity_workflow_states.
  */
- 
+
 /**
  * Get all states in the system, with options to filter, only where a workflow exists.
  */
@@ -1416,10 +1441,10 @@ function entity_workflow_insert_entity_workflow_entity_history($data) {
  */
 
 /**
- * Given a node id, find out what it's current state is. Unique (for now).
+ * Given an entity id, find out what it's current state is. Unique (for now).
  */
-function entity_workflow_get_entity_workflow_entity_by_nid($nid) {
-  $results = db_query('SELECT * FROM {entity_workflow_entity} WHERE nid = :nid', array(':nid' => $nid));
+function entity_workflow_get_workflow_entity_by_id($entity_id) {
+  $results = db_query('SELECT * FROM {entity_workflow_entity} WHERE eid = :eid', array(':eid' => $entity_id));
   return $results->fetchObject();
 }
 
@@ -1480,4 +1505,30 @@ function entity_workflow_update_entity_workflow_entity($data, $old_sid, $comment
     'comment' => $comment,
   );
   entity_workflow_insert_entity_workflow_entity_history($data);
+}
+
+/**
+ *
+ * @param Object $entity
+ * @return Mixed $entity_id
+ */
+function entity_workflow_get_entity_id($entity) {
+
+  $entity_id = '';
+
+  // yes, really! If you know of a better way to access an entity's type then please amend!
+  $type = ( isset($entity->entity_workflow_entity_type) ) ? $entity->entity_workflow_entity_type : '';
+
+  if ($type) {
+    try {
+      $wrapper = entity_metadata_wrapper($type, $entity);
+      $entity_id = $wrapper->getIdentifier();
+    }
+    catch (Exception $e){
+      watchdog('entity_workflow', $e->getMessage());
+    }
+  }
+
+  return $entity_id;
+
 }
