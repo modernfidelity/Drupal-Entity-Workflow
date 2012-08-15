@@ -35,6 +35,7 @@ function entity_workflow_workflow($op, $old_state, $new_state, $node) {
 define('entity_workflow_CREATION', 1);
 define('entity_workflow_CREATION_DEFAULT_WEIGHT', -50);
 define('entity_workflow_DELETION', 0);
+define('ADMIN_ROLE', 3);
 
 /**
  * Implements hook_permission().
@@ -448,21 +449,28 @@ function entity_workflow_features_api() {
  * Validate target state and either execute a transition immediately or schedule
  * a transition to be executed later by cron.
  *
- * @param $node
+ * @param $entity
  * @param $sid
  *   An integer; the target state ID.
  */
-function entity_workflow_transition($node, $sid) {
+function entity_workflow_transition($entity, $sid) {
+
   // Make sure new state is a valid choice.
-  if (array_key_exists($sid, entity_workflow_field_choices($node))) {
-    $node->entity_workflow_scheduled = isset($node->entity_workflow_scheduled) ? $node->entity_workflow_scheduled : FALSE;
-    if (!$node->entity_workflow_scheduled) {
+  if (array_key_exists($sid, entity_workflow_field_choices($entity))) {
+
+    $entity->entity_workflow_scheduled = isset($entity->entity_workflow_scheduled) ? $entity->entity_workflow_scheduled : FALSE;
+
+    if (!$entity->entity_workflow_scheduled) {
       // It's an immediate change. Do the transition.
-      entity_workflow_execute_transition($node, $sid, isset($node->entity_workflow_comment) ? $node->entity_workflow_comment : NULL);
+      entity_workflow_execute_transition($entity, $sid, isset($entity->entity_workflow_comment) ? $entity->entity_workflow_comment : NULL);
     }
+
     else {
+
+      // @todo come back and implement scheduling!
+
       // Schedule the the time to change the state.
-      $old_sid = entity_workflow_entity_current_state($node);
+      /*$old_sid = entity_workflow_entity_current_state($node);
       if ($node->entity_workflow_scheduled_date['day'] < 10) {
         $node->entity_workflow_scheduled_date['day'] = '0' .
         $node->entity_workflow_scheduled_date['day'];
@@ -502,7 +510,7 @@ function entity_workflow_transition($node, $sid) {
           drupal_set_message(t('@node_title is scheduled for state change to %state_name on !scheduled_date',
             array('@node_title' => $node->title, '%state_name' => $state->state, '!scheduled_date' => format_date($scheduled))));
         }
-      }
+      }*/
     }
   }
 }
@@ -667,46 +675,58 @@ function entity_workflow_form_alter(&$form, &$form_state, $form_id) {
 /**
  * Execute a transition (change state of a node).
  *
- * @param $node
+ * @param $entity
  * @param $sid
  *   Target state ID.
  * @param $comment
- *   A comment for the node's workflow history.
+ *   A comment for the entity's workflow history.
  * @param $force
  *   If set to TRUE, workflow permissions will be ignored.
  *
  * @return int
  *   ID of new state.
  */
-function entity_workflow_execute_transition($node, $sid, $comment = NULL, $force = FALSE) {
+function entity_workflow_execute_transition($entity, $sid, $comment = NULL, $force = FALSE) {
+
   global $user;
-  $old_sid = entity_workflow_entity_current_state($node);
+
+  $old_sid = entity_workflow_entity_current_state($entity);
+
+  // 1. CHECK WE'RE ACTUALLY GOING TO A NEW STATE
   if ($old_sid == $sid) {
+
     // Stop if not going to a different state.
     // Write comment into history though.
-    if ($comment && empty($node->entity_workflow_scheduled_comment)) {
-      $node->entity_workflow_stamp = REQUEST_TIME;
-      entity_workflow_update_entity_workflow_entity_stamp($node->nid, $node->entity_workflow_stamp);
-      $result = module_invoke_all('workflow', 'transition pre', $old_sid, $sid, $node);
+
+    if ($comment && empty($entity->entity_workflow_scheduled_comment)) {
+      $entity->entity_workflow_stamp = REQUEST_TIME;
+      entity_workflow_update_entity_workflow_entity_stamp($entity->nid, $entity->entity_workflow_stamp);
+      $result = module_invoke_all('workflow', 'transition pre', $old_sid, $sid, $entity);
       $data = array(
-        'nid' => $node->nid,
-        'old_sid' => $node->workflow,
+        'nid' => $entity->nid,
+        'old_sid' => $entity->workflow,
         'sid' => $sid,
         'uid' => $user->uid,
-        'stamp' => $node->entity_workflow_stamp,
+        'stamp' => $entity->entity_workflow_stamp,
         'comment' => $comment,
       );
       entity_workflow_insert_entity_workflow_entity_history($data);
-      unset($node->entity_workflow_comment);
-      $result = module_invoke_all('workflow', 'transition post', $old_sid, $sid, $node);
+      unset($entity->entity_workflow_comment);
+      $result = module_invoke_all('workflow', 'transition post', $old_sid, $sid, $entity);
     }
     return;
   }
+
+  // 2. CHECK TRANSITION EXISTS
   $transition = entity_workflow_get_entity_workflow_transitions_by_sid_target_sid($old_sid, $sid);
   if (!$transition && !$force) {
       watchdog('workflow', 'Attempt to go to nonexistent transition (from %old to %new)', array('%old' => $old_sid, '%new' => $sid, WATCHDOG_ERROR));
       return;
   }
+
+
+  // 3. CHECK USER IS ALLOWED TO MAKE THE TRANSITION
+
   // Make sure this transition is valid and allowed for the current user.
   // Check allowability of state change if user is not superuser (might be cron).
   if (($user->uid != 1) && !$force) {
@@ -718,64 +738,78 @@ function entity_workflow_execute_transition($node, $sid, $comment = NULL, $force
   }
   // Invoke a callback indicating a transition is about to occur. Modules
   // may veto the transition by returning FALSE.
-  $result = module_invoke_all('workflow', 'transition pre', $old_sid, $sid, $node);
+  $result = module_invoke_all('workflow', 'transition pre', $old_sid, $sid, $entity);
   // Stop if a module says so.
   if (in_array(FALSE, $result)) {
     watchdog('workflow', 'Transition vetoed by module.');
     return;
   }
-  // If the node does not have an existing $node->workflow property, save the $old_sid there so it can be logged.
-  if (!isset($node->workflow)) {
-    $node->workflow = $old_sid;
+  // If the node does not have an existing $entity->workflow property, save the $old_sid there so it can be logged.
+  if (!isset($entity->workflow)) {
+    $entity->workflow = $old_sid;
   }
   // Change the state.
   global $user;
   $data = array(
-    'nid' => $node->nid,
+    'eid' => entity_workflow_get_entity_id($entity),
     'sid' => $sid,
     'uid' => $user->uid,
     'stamp' => REQUEST_TIME,
   );
   // entity_workflow_update_entity_workflow_entity places a history comment as well.
   entity_workflow_update_entity_workflow_entity($data, $old_sid, $comment);
-  $node->workflow = $sid;
+
+  $entity->workflow = $sid;
   // Register state change with watchdog.
-  $type = node_type_get_name($node->type);
+  $type = node_type_get_name($entity->type);
   if ($state = entity_workflow_get_entity_workflow_states_by_sid($sid)) {
     watchdog('workflow', 'State of @type %node_title set to %state_name',
-      array('@type' => $type, '%node_title' => $node->title, '%state_name' => $state->state), WATCHDOG_NOTICE, l('view', 'node/' . $node->nid));
+      array('@type' => $type, '%node_title' => $entity->title, '%state_name' => $state->state), WATCHDOG_NOTICE, l('view', 'node/' . $entity->nid));
   }
   // Notify modules that transition has occurred. Action triggers should take place in response to this callback, not the previous one.
-  module_invoke_all('workflow', 'transition post', $old_sid, $sid, $node);
+  module_invoke_all('workflow', 'transition post', $old_sid, $sid, $entity);
   // Clear any references in the scheduled listing.
-  entity_workflow_delete_entity_workflow_scheduled_transition_by_nid($node->nid);
+  entity_workflow_delete_entity_workflow_scheduled_transition_by_nid($entity->nid);
   return $sid;
 }
 
 
 /**
- * Get the states current user can move to for a given node.
+ * Get the states current user can move to for a given entity.
  *
- * @param object $node
- *   The node to check.
+ * @param object $entity
+ *   The entity to check.
  * @return
  *   Array of transitions.
  */
-function entity_workflow_field_choices($node) {
+function entity_workflow_field_choices($entity) {
+
   global $user;
+
   $choices = array();
-  if ($workflow = entity_workflow_get_entity_workflow_type_map_by_type($node->type)) {
+
+  if ($workflow = entity_workflow_get_entity_workflow_type_map_by_type($entity->entity_workflow_entity_type)) {
+
     $roles = array_keys($user->roles);
-    $current_sid = entity_workflow_entity_current_state($node);
+    $current_sid = entity_workflow_entity_current_state($entity);
+
     // If user is node author or this is a new page, give the authorship role.
-    if (($user->uid == $node->uid && $node->uid > 0) || (arg(0) == 'node' && arg(1) == 'add')) {
-      $roles += array('author' => 'author');
+    if ($entity->entity_workflow_entity_type == 'node'){
+
+      if (($user->uid == $entity->uid && $entity->uid > 0) || (arg(0) == 'node' && arg(1) == 'add')) {
+        $roles += array('author' => 'author');
+      }
+
     }
-    if ($user->uid == 1) {
-      // Superuser is special.
+
+    // changed check for admin user - can't always assume there's only one admin user or that their uid is 1
+    $roles = array_keys($user->roles);
+    if (in_array(ADMIN_ROLE, $roles)){
       $roles = 'ALL';
     }
+
     $current_sid == entity_workflow_get_creation_state_by_wid($workflow->wid);
+
     // entity_workflow_allowable_transitions() does not return the entire transition row. Would like it to, but doesn't.
     // Instead it returns just the allowable data as:
     // [tid] => 1 [state_id] => 1 [state_name] => (creation) [state_weight] => -50
@@ -787,6 +821,7 @@ function entity_workflow_field_choices($node) {
       }
     }
   }
+
   return $choices;
 }
 
@@ -1488,16 +1523,17 @@ function entity_workflow_delete_entity_workflow_entity_by_sid($sid) {
  * Given data, insert the node association.
  */
 function entity_workflow_update_entity_workflow_entity($data, $old_sid, $comment = NULL) {
+
   $data = (object) $data;
-  if (isset($data->nid) && entity_workflow_get_entity_workflow_entity_by_nid($data->nid)) {
-    drupal_write_record('entity_workflow_entity', $data, 'nid');
+  if (isset($data->eid) && entity_workflow_get_workflow_entity_by_id($data->eid)) {
+    drupal_write_record('entity_workflow_entity', $data, 'eid');
   }
   else {
     drupal_write_record('entity_workflow_entity', $data);
   }
   // Write to history for this node.
   $data = array(
-    'nid' => $data->nid,
+    'nid' => $data->eid,
     'old_sid' => $old_sid,
     'sid' => $data->sid,
     'uid' => $data->uid,
@@ -1508,6 +1544,7 @@ function entity_workflow_update_entity_workflow_entity($data, $old_sid, $comment
 }
 
 /**
+ * Helper function to get the id value for a given entity
  *
  * @param Object $entity
  * @return Mixed $entity_id
