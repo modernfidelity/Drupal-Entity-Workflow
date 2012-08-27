@@ -1055,20 +1055,20 @@ function entity_workflow_get_entity_workflow_type_map() {
 }
 
 /**
- * Get entity_workflow_type_map for a type. On no record, FALSE is returned.
- * Currently this is a unique result but requests have been made to allow a node to have multiple
- * workflows. This is trickier than it sounds as a lot of our processing code will have to be
- * tweaked to account for multiple results.
- * ALERT: If a node type is *not* mapped to a workflow it will be listed as wid 0.
+ * Get entity_workflow_type_map for an entity type+bundle.
+ *
+ * ALERT: If a type+bundle is *not* mapped to a workflow it will be listed as wid 0.
  * Hence, we filter out the non-mapped results.
  */
-function entity_workflow_get_entity_workflow_type_map_by_type($type) {
-  $results = db_query('SELECT * FROM {entity_workflow_type_map} WHERE type = :type AND wid != 0', array(':type' => $type));
+function entity_workflow_get_entity_workflow_type_map_by_type($bundle) {
+  $results = db_query('SELECT * FROM {entity_workflow_type_map} WHERE bundle = :bundle AND wid != 0', array(':bundle' => $bundle));
+
   return $results->fetchObject();
 }
 
 /**
- * Given a wid, find all node types mapped to it.
+ * Given a wid, find all entities mapped to it.
+ *
  */
 function entity_workflow_get_entity_workflow_type_map_by_wid($wid) {
   $results = db_query('SELECT * FROM {entity_workflow_type_map} WHERE wid = :wid', array(':wid' => $wid));
@@ -1097,14 +1097,21 @@ function entity_workflow_delete_entity_workflow_type_map_by_type($type) {
 }
 
 /**
+ * Given a bundle, delete the map for that workflow.
+ */
+function entity_workflow_delete_entity_workflow_type_map_by_bundle($bundle) {
+  return db_delete('entity_workflow_type_map')->condition('bundle', $bundle)->execute();
+}
+
+/**
  * Given information, insert a new entity_workflow_type_map. Returns data by ref. (like node_save).
  */
 function entity_workflow_insert_entity_workflow_type_map(&$data) {
 
   $data = (object) $data;
-  // Be sure we have a clean insert. There should never be more than one map for a type.
-  if (isset($data->type)) {
-    entity_workflow_delete_entity_workflow_type_map_by_type($data->type);
+  // Be sure we have a clean insert. There should never be more than one map for a bundle.
+  if (isset($data->bundle)) {
+    entity_workflow_delete_entity_workflow_type_map_by_bundle($data->bundle);
   }
 
   drupal_write_record('entity_workflow_type_map', $data);
