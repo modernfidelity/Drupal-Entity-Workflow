@@ -379,10 +379,11 @@ function entity_workflow_entity_update($node) {
 /**
  * Implements hook_node_delete().
  */
-function entity_workflow_entity_delete($node) {
+function entity_workflow_entity_delete($entity) {
+
   $node->entity_workflow_stamp = REQUEST_TIME;
   // Delete the association of node to state.
-  entity_workflow_delete_entity_workflow_entity_by_nid($node->nid);
+  entity_workflow_delete_entity_workflow_entity_by_eid(entity_workflow_get_entity_id($entity));
   if (!empty($node->_worfklow)) {
     global $user;
     $data = array(
@@ -1227,7 +1228,7 @@ function entity_workflow_update_entity_workflow_transitions_roles($tid, $roles) 
  */
 function entity_workflow_get_entity_workflow_states($options = array()) {
   $query = 'SELECT * FROM {entity_workflow_states} ws '.
-    'LEFT JOIN {workflows} w ON ws.wid = w.wid WHERE 1=1 ';
+    'LEFT JOIN {entity_workflows} w ON ws.wid = w.wid WHERE 1=1 ';
   $query_array = array();
   if (isset($options['sysid'])) {
     $query_array[':sysid'] = $options['sysid'];
@@ -1516,10 +1517,10 @@ function entity_workflow_update_entity_workflow_entity_uid($uid, $new_uid) {
 }
 
 /**
- * Given nid, delete associated workflow data.
+ * Given eid, delete associated workflow data.
  */
-function entity_workflow_delete_entity_workflow_entity_by_nid($nid) {
-  return db_delete('entity_workflow_entity')->condition('nid', $nid)->execute();
+function entity_workflow_delete_entity_workflow_entity_by_eid($eid) {
+  return db_delete('entity_workflow_entity')->condition('eid', $eid)->execute();
 }
 
 /**
@@ -1579,3 +1580,36 @@ function entity_workflow_get_entity_id($entity) {
   return $entity_id;
 
 }
+
+
+/**
+ * @todo remove this when we've finished.
+ * Only used for quick debugging.
+ */
+function entity_workflow_debug_backtrace() {
+
+  $bt = debug_backtrace();
+
+  foreach ( $bt as $k => $v ) {
+
+    if ( $v['function'] != 'dlog' && $v['function'] != 'log' ) {
+
+      $class = $func = FALSE;
+      if ( isset($v['class']) ) {
+        $class = $v['class'] . '::';
+      }
+
+      if ( isset($v['function']) ) {
+        $function = $v['function'];
+      }
+
+      if ( isset($v['line']) ) {
+        $line = $v['line'];
+      }
+
+      print $class . $function . '(Line ' . $line . ')' . '<br />';
+    }
+  }
+
+}
+
