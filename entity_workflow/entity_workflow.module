@@ -792,7 +792,7 @@ function entity_workflow_field_choices($entity) {
 
   $choices = array();
 
-  if ($workflow = entity_workflow_get_entity_workflow_type_map_by_type($entity->entity_workflow_entity_type)) {
+  if ($workflow = entity_workflow_get_entity_workflow_type_map_by_type($entity->type)) {
 
     $roles = array_keys($user->roles);
     $current_sid = entity_workflow_entity_current_state($entity);
@@ -1553,7 +1553,7 @@ function entity_workflow_update_entity_workflow_entity($data, $old_sid, $comment
   }
   // Write to history for this node.
   $data = array(
-    'nid' => $data->eid,
+    'eid' => $data->eid,
     'old_sid' => $old_sid,
     'sid' => $data->sid,
     'uid' => $data->uid,
