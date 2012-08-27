@@ -885,7 +885,7 @@ function entity_workflow_admin_ui_types_form($form) {
   }
   $type_map = array();
   foreach (entity_workflow_get_entity_workflow_type_map() as $data) {
-    $type_map[$data->type] = $data->wid;
+    $type_map[$data->bundle] = $data->wid;
   }
   $form['#theme'] = 'entity_workflow_admin_ui_types_form';
   $form['#tree'] = TRUE;
@@ -896,22 +896,32 @@ function entity_workflow_admin_ui_types_form($form) {
   );
 
   $entities = entity_get_info();
-  foreach ($entities as $type => $entity) {
+  foreach ($entities as $entity_type => $entity) {
 
-    $form[$type]['workflow'] = array(
-      '#type' => 'select',
-      '#title' => check_plain($entity['label']),
-      '#options' => $workflows,
-      '#default_value' => isset($type_map[$type]) ? $type_map[$type] : 0,
-    );
-    $form[$type]['placement'] = array(
-      '#type' => 'checkboxes',
-      '#options' => array(
-        'node' => t('Post'),
-        'comment' => t('Comment'),
-      ),
-      '#default_value' => variable_get('entity_workflow_' . $type, array('node')),
-    );
+    foreach ($entity['bundles'] as $bundle_type => $bundle) {
+
+      $form[$entity_type][$bundle_type]['workflow'] = array(
+        '#type' => 'select',
+        '#title' => check_plain($bundle['label']),
+        '#options' => $workflows,
+        '#default_value' => isset($type_map[$bundle_type]) ? $type_map[$bundle_type] : 0,
+      );
+
+      // we only need this option for Nodes
+      if ( $entity_type == 'node') {
+
+        $form[$entity_type][$bundle_type]['placement'] = array(
+          '#type' => 'checkboxes',
+          '#options' => array(
+            'node' => t('Post'),
+            'comment' => t('Comment'),
+          ),
+          '#default_value' => variable_get('entity_workflow_' . $entity_type, array('node')),
+        );
+
+      }
+
+    }
 
   }
 
@@ -927,14 +937,20 @@ function entity_workflow_admin_ui_types_form($form) {
  */
 function theme_entity_workflow_admin_ui_types_form($variables) {
   $form = $variables['form'];
-  $header = array(t('Content Type'), t('Workflow'), t('Display Workflow Form for:'));
+  $header = array(t('Entity Type/Bundle'), t('Workflow'), t('Display Workflow Form for:'));
   $rows = array();
 
   $entities = entity_get_info();
-  foreach ($entities as $type => $entity) {
-    $name = $form[$type]['workflow']['#title'];
-    unset($form[$type]['workflow']['#title']);
-    $rows[] = array($name, drupal_render($form[$type]['workflow']), drupal_render($form[$type]['placement']));
+  foreach ($entities as $entity_type => $entity) {
+
+    foreach ($entity['bundles'] as $bundle_type => $bundle) {
+
+      $name = $form[$entity_type][$bundle_type]['workflow']['#title'];
+      unset($form[$entity_type][$bundle_type]['workflow']['#title']);
+      $rows[] = array($name, drupal_render($form[$entity_type][$bundle_type]['workflow']), drupal_render($form[$entity_type][$bundle_type]['placement']));
+
+    }
+
   }
 
   $output = drupal_render($form['help']);
@@ -978,17 +994,26 @@ function entity_workflow_admin_ui_get_roles() {
  */
 function entity_workflow_types_save($form_values) {
 
-  entity_workflow_delete_entity_workflow_type_map_all();
+  entity_workflow_delete_entity_workflow_type_map_all(); // OK
 
   $entities = entity_get_info();
-  foreach ($entities as $type => $entity) {
-    $data = array(
-      'type' => $type,
-      'wid' => $form_values[$type]['workflow'],
-    );
-    entity_workflow_insert_entity_workflow_type_map($data);
+  foreach ($entities as $entity_type => $entity) {
 
-    variable_set('entity_workflow_' . $type, array_keys(array_filter(($form_values[$type]['placement']))));
+    foreach ($entity['bundles'] as $bundle_type => $bundle) {
+
+      $data = array(
+        'type' => $entity_type,
+        'bundle' => $bundle_type,
+        'wid' => $form_values[$entity_type][$bundle_type]['workflow'],
+      );
+      entity_workflow_insert_entity_workflow_type_map($data);
+
+      // @todo we only need this placement if its a node
+      if ($entity_type == 'node') {
+
+        variable_set('entity_workflow_' . $bundle_type, array_keys(array_filter(($form_values[$entity_type][$bundle_type]['placement']))));
+      }
+    }
 
   }
 }
