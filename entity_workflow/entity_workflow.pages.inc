@@ -19,13 +19,13 @@ function entity_workflow_tab_page($node = NULL) {
   foreach (entity_workflow_get_entity_workflow_states($options) as $data) {
     $deleted_states[$data->sid] = check_plain(t($data->state));
   }
-  $current = entity_workflow_node_current_state($node);
+  $current = entity_workflow_entity_current_state($node);
   // theme_entity_workflow_current_state() must run state through check_plain().
   $current_state = theme('entity_workflow_current_state', array('state_name' => $states[$current]));
   $output = t('Current state: !state', array('!state' => $current_state));
   $output .= drupal_render(drupal_get_form('entity_workflow_tab_form', $node, $workflow->wid, $states, $current));
   $rows = array();
-  foreach (entity_workflow_get_entity_workflow_node_history_by_nid($node->nid) as $history) {
+  foreach (entity_workflow_get_entity_workflow_entity_history_by_nid($node->nid) as $history) {
     if ($history->sid == $current && !isset($deleted_states[$history->sid]) && !isset($current_themed)) {
       // Theme the current state differently so it stands out.
       $state_name = theme('entity_workflow_current_state',  array('state_name' => $states[$history->sid]));
