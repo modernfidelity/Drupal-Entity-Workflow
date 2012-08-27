@@ -846,7 +846,6 @@ function entity_workflow_entity_current_state($entity) {
 
   // given an entity id, find out what its current state is
   $entity_id = entity_workflow_get_entity_id($entity);
-  $type = $entity->entity_workflow_entity_type;
 
   if (!empty($entity_id)) {
 
@@ -857,10 +856,11 @@ function entity_workflow_entity_current_state($entity) {
       $sid = $state->sid;
     }
   }
-  if (!$state && !empty($type)) {
+
+  if (!$state && !empty($entity->type)) {
 
     // No current state. Use creation state.
-    if ( $workflow = entity_workflow_get_entity_workflow_type_map_by_type($type)) {
+    if ( $workflow = entity_workflow_get_entity_workflow_type_map_by_type($entity->type)) {
 
       $sid = entity_workflow_get_creation_state_by_wid($workflow->wid);
     }
@@ -870,19 +870,28 @@ function entity_workflow_entity_current_state($entity) {
 
 }
 
-function entity_workflow_entity_previous_state($node) {
+function entity_workflow_entity_previous_state($entity) {
+
   $sid = FALSE;
   // There is no nid when creating a node.
-  if (!empty($node->nid)) {
+
+  $eid = entity_workflow_get_entity_id($entity);
+
+  if ($eid) {
+
     $sids = array();
     $sid = -1;
-    $last_history = entity_workflow_get_entity_workflow_entity_history_by_nid($node->nid, 1);
-    $sid = $last_history->sid;
+
+    $last_history = entity_workflow_get_entity_workflow_entity_history_by_eid($eid, 1);
+
+    if ($last_history) {
+      $sid = $last_history->sid;
+    }
   }
-  if (!$sid && !empty($node->type)) {
+  if (!$sid && !empty($entity->type)) {
     // No current state. Use creation state.
     $sid = FALSE;
-    if ($workflow = entity_workflow_get_entity_workflow_type_map_by_type($node->type)) {
+    if ($workflow = entity_workflow_get_entity_workflow_type_map_by_type($entity->type)) {
       $sid = entity_workflow_get_creation_state_by_wid($workflow->wid);
     }
   }
@@ -1448,16 +1457,16 @@ function entity_workflow_insert_entity_workflow_scheduled_transition($data) {
  */
 
 /**
- * Get all recored history for a node id.
+ * Get all recored history for an entity id.
  * Since this may return a lot of data, a limit is included to allow for only one result.
  */
-function entity_workflow_get_entity_workflow_entity_history_by_nid($nid, $limit = NULL) {
+function entity_workflow_get_entity_workflow_entity_history_by_eid($eid, $limit = NULL) {
   if (empty($limit)) {
     $limit = variable_get('entity_workflow_states_per_page', 20);
   }
   $results = db_query('SELECT * FROM {entity_workflow_entity_history} h ' .
     'LEFT JOIN {users} u ON h.uid = u.uid ' .
-    'WHERE nid = :nid ORDER BY h.hid DESC', array(':nid' => $nid));
+    'WHERE eid = :eid ORDER BY h.hid DESC', array(':eid' => $eid));
   if ($limit == 1) {
     return $results->fetchObject();
   }

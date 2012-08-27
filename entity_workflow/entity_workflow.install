@@ -85,7 +85,7 @@ function entity_workflow_schema() {
   $schema['entity_workflow_entity_history'] = array(
     'fields' => array(
       'hid'     => array('type' => 'serial', 'not null' => TRUE),
-      'nid'     => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0, 'disp-width' => '10'),
+      'eid'     => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0, 'disp-width' => '10'),
       'old_sid' => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0, 'disp-width' => '10'),
       'sid'     => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0, 'disp-width' => '10'),
       'uid'     => array('type' => 'int', 'unsigned' => TRUE, 'not null' => TRUE, 'default' => 0, 'disp-width' => '10'),
@@ -93,7 +93,7 @@ function entity_workflow_schema() {
       'comment' => array('type' => 'text', 'size' => 'big', 'not null' => FALSE)),
     'primary key' => array('hid'),
     'indexes' => array(
-      'nid' => array('nid', 'sid')),
+      'eid' => array('eid', 'sid')),
   );
   $schema['entity_workflow_entity'] = array(
     'fields' => array(
