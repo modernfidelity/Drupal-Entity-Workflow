@@ -802,7 +802,7 @@ function entity_workflow_admin_ui_state_delete_form($form, $form_state, $wid, $s
   // State to delete.
   $delete_state = entity_workflow_get_entity_workflow_states_by_sid($sid);
   // Will any nodes have no state if this state is deleted?
-  $count = count(entity_workflow_get_entity_workflow_node_by_sid($sid));
+  $count = count(entity_workflow_get_entity_workflow_entity_by_sid($sid));
   if ($count > 0) {
     // Cannot assign a node to (creation) because that implies that the node does not exist.
     // Don't include the state to be deleted in our list of possible states that can be assigned.
