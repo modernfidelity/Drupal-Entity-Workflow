@@ -692,7 +692,7 @@ function entity_workflow_execute_transition($entity, $sid, $comment = NULL, $for
 
   $old_sid = entity_workflow_entity_current_state($entity);
 
-  // 1. CHECK WE'RE ACTUALLY GOING TO A NEW STATE
+  // 1. CHECK WE'RE ACTUALLY GOING TO A NEW STATE (@todo needs testing)
   if ($old_sid == $sid) {
 
     // Stop if not going to a different state.
@@ -761,15 +761,18 @@ function entity_workflow_execute_transition($entity, $sid, $comment = NULL, $for
 
   $entity->workflow = $sid;
   // Register state change with watchdog.
-  $type = node_type_get_name($entity->type);
+  $type = $entity->entity_workflow_entity_type;
+  $eid = entity_workflow_get_entity_id($entity);
   if ($state = entity_workflow_get_entity_workflow_states_by_sid($sid)) {
-    watchdog('workflow', 'State of @type %node_title set to %state_name',
-      array('@type' => $type, '%node_title' => $entity->title, '%state_name' => $state->state), WATCHDOG_NOTICE, l('view', 'node/' . $entity->nid));
+    watchdog('workflow', 'State of Entity type: @type with id %entity_id set to %state_name',
+      array('@type' => $type, '%entity_id' => $eid, '%state_name' => $state->state), WATCHDOG_NOTICE);
   }
   // Notify modules that transition has occurred. Action triggers should take place in response to this callback, not the previous one.
   module_invoke_all('workflow', 'transition post', $old_sid, $sid, $entity);
+
   // Clear any references in the scheduled listing.
-  entity_workflow_delete_entity_workflow_scheduled_transition_by_nid($entity->nid);
+  entity_workflow_delete_entity_workflow_scheduled_transition_by_nid($eid);
+
   return $sid;
 }
 
