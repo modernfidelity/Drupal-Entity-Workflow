@@ -32,9 +32,9 @@ function entity_workflow_workflow($op, $old_state, $new_state, $node) {
 }
 //*/
 
-define('entity_workflow_CREATION', 1);
-define('entity_workflow_CREATION_DEFAULT_WEIGHT', -50);
-define('entity_workflow_DELETION', 0);
+define('ENTITY_WORKFLOW_CREATION', 1);
+define('ENTITY_WORKFLOW_CREATION_DEFAULT_WEIGHT', -50);
+define('ENTITY_WORKFLOW_DELETION', 0);
 define('ADMIN_ROLE', 3);
 
 /**
@@ -388,7 +388,7 @@ function entity_workflow_entity_delete($node) {
     $data = array(
       'nid' => $node->nid,
       'old_sid' => $node->workflow,
-      'sid' => entity_workflow_DELETION,
+      'sid' => ENTITY_WORKFLOW_DELETION,
       'uid' => $user->uid,
       'stamp' => $node->entity_workflow_stamp,
       'comment' => t('Node deleted'),
@@ -917,7 +917,7 @@ function entity_workflow_transition_allowed($tid, $role = NULL) {
  */
 function entity_workflow_get_creation_state_by_wid($wid) {
 
-  $options = array(':sysid' => entity_workflow_CREATION);
+  $options = array(':sysid' => ENTITY_WORKFLOW_CREATION);
   $result = entity_workflow_get_entity_workflow_states_by_wid($wid, $options);
   return isset($result[0]->sid) ? $result[0]->sid : 0;
 }
