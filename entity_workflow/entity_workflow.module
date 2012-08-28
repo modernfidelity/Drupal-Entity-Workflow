@@ -359,12 +359,12 @@ function entity_workflow_entity_insert($entity) {
     // If the state is not specified, use first valid state.
     // For example, a new entity must move from (creation) to some
     // initial state.
-    if (empty($entity->workflow)) {
+    if (!isset($entity->workflow)) {
       $choices = entity_workflow_field_choices($entity);
       $keys = array_keys($choices);
       $sid = array_shift($keys);
     }
-    if (!isset($sid)) {
+    else {
       $sid = $entity->workflow;
     }
     // And make the transition.
@@ -387,27 +387,29 @@ function entity_workflow_entity_update($entity) {
 }
 
 /**
- * Implements hook_node_delete().
+ * Implements hook_entity_delete().
  */
 function entity_workflow_entity_delete($entity) {
 
-  $node->entity_workflow_stamp = REQUEST_TIME;
-  // Delete the association of node to state.
+  $entity->entity_workflow_stamp = REQUEST_TIME;
+
+  // Delete the association of entity to state.
   entity_workflow_delete_entity_workflow_entity_by_eid(entity_workflow_get_entity_id($entity));
-  if (!empty($node->_worfklow)) {
+
+  if (!empty($entity->worfklow)) {
     global $user;
     $data = array(
-      'nid' => $node->nid,
-      'old_sid' => $node->workflow,
+      'eid' => entity_workflow_get_entity_id($entity),
+      'old_sid' => $entity->workflow,
       'sid' => ENTITY_WORKFLOW_DELETION,
       'uid' => $user->uid,
-      'stamp' => $node->entity_workflow_stamp,
-      'comment' => t('Node deleted'),
+      'stamp' => $entity->entity_workflow_stamp,
+      'comment' => t('Entity deleted'),
     );
     entity_workflow_insert_entity_workflow_entity_history($data);
   }
   // Delete any scheduled transitions for this node.
-  entity_workflow_delete_entity_workflow_scheduled_transition_by_nid($node->nid);
+  entity_workflow_delete_entity_workflow_scheduled_transition_by_nid(entity_workflow_get_entity_id($entity));
 }
 
 /**
