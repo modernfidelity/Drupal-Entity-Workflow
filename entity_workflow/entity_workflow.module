@@ -322,7 +322,7 @@ function entity_workflow_token_info() {
  */
 
 /**
- * Implements hook_node_load().
+ * Implements hook_entity_load().
  */
 function entity_workflow_entity_load($entities, $type) {
 
@@ -350,24 +350,25 @@ function entity_workflow_entity_load($entities, $type) {
 }
 
 /**
- * Implements hook_node_insert().
+ * Implements hook_entity_insert().
  */
-function entity_workflow_entity_insert($node) {
+function entity_workflow_entity_insert($entity) {
+
   // Skip if there are no workflows.
-  if ($workflow = entity_workflow_get_entity_workflow_type_map_by_type($node->type)) {
+  if ($workflow = entity_workflow_get_entity_workflow_type_map_by_type($entity->type)) {
     // If the state is not specified, use first valid state.
-    // For example, a new node must move from (creation) to some
+    // For example, a new entity must move from (creation) to some
     // initial state.
-    if (empty($node->workflow)) {
-      $choices = entity_workflow_field_choices($node);
+    if (empty($entity->workflow)) {
+      $choices = entity_workflow_field_choices($entity);
       $keys = array_keys($choices);
       $sid = array_shift($keys);
     }
     if (!isset($sid)) {
-      $sid = $node->workflow;
+      $sid = $entity->workflow;
     }
     // And make the transition.
-    entity_workflow_transition($node, $sid);
+    entity_workflow_transition($entity, $sid);
   }
 }
 
