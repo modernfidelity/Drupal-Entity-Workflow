@@ -27,9 +27,9 @@ Rework by @modernfidelity + @nano_monkey
 
 5. Housekeeping
 
-- Crud/Helpers tidy up - order, replace nids with eids, $node with $entity etc etc
-- DB schema tidy up - replace nids with eids etc etc
-- Clean up entity API load, insert, save and delete hooks. All working but with warnings and notices.
+Crud/Helpers tidy up - order, replace nids with eids, $node with $entity etc etc
+DB schema tidy up - replace nids with eids etc etc
+Clean up entity API load, insert, save and delete hooks. All working but with warnings and notices.
 
 6. entity_workflow_form_alter() needs looking at
 
@@ -38,7 +38,7 @@ Rework by @modernfidelity + @nano_monkey
 8. TEST TEST TEST!
 
 Gotchas - things to watch out for:
--------------------------------------------------------
+
 Anywhere we are calling variable_get/set() for the placement information for a node.
 
 I've made amends to how these are initially saved and loaded in the entity_workflow_admin_ui_types_form
