@@ -17,25 +17,25 @@ Rework by @modernfidelity + @nano_monkey
 @TODO :
 
 
-1. Comments and Transition History
+- Node stuff - make sure we haven't broken any of the node functionality we get for free with workflow - i.e. form widgets for the workflow changes on node edit form, the workflow tab on the node page etc etc
 
-2. Scheduling
+- Comments and Transition History
 
-3. Tokens - how are these used? Do we need them?
+- Scheduling
 
-4. GUI - Group Bundles by entity type. Add a checkbox to select individual bundles, and one to 'Map to all' bundles.
+- Tokens - how are these used? Do we need them?
 
-5. Housekeeping
+- GUI - Group Bundles by entity type. Add a checkbox to select individual bundles, and one to 'Map to all' bundles.
 
-Crud/Helpers tidy up - order, replace nids with eids, $node with $entity etc etc
-DB schema tidy up - replace nids with eids etc etc
-Clean up entity API load, insert, save and delete hooks. All working but with warnings and notices.
+- Housekeeping: Crud/Helpers/DB Schema tidy up - replace nids with eids, $node with $entity etc etc
 
-6. entity_workflow_form_alter() needs looking at
+- entity_workflow_user_delete() needs amending
 
-7. The Node page workflow tab - need to make sure this is bulletproof for nodes and isn't broken for other entities
+- entity_workflow_form_alter() needs amending
 
-8. TEST TEST TEST!
+- The Node page workflow tab - need to make sure this is bulletproof for nodes and isn't broken for other entities
+
+- TEST TEST TEST!
 
 Gotchas - things to watch out for:
 
