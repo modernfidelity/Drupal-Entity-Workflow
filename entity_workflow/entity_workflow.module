@@ -68,6 +68,8 @@ function entity_workflow_menu() {
 
 /**
  * Menu access control callback. Determine access to Workflow tab.
+ *
+ * @todo Test and amend if necessary
  */
 function entity_workflow_entity_tab_access($node = NULL) {
   global $user;
@@ -122,6 +124,8 @@ function entity_workflow_theme() {
 
 /**
  * Implements hook_cron().
+ *
+ * @todo Test and amend if necessary
  */
 function entity_workflow_cron() {
   $clear_cache = FALSE;
@@ -154,6 +158,8 @@ function entity_workflow_cron() {
 
 /**
  * Implements hook_field_extra_fields_alter().
+ *
+ * @todo Test and amend if necessary
  */
 function entity_workflow_field_extra_fields_alter(&$info) {
   foreach (node_type_get_types() as $bundle) {
@@ -170,6 +176,8 @@ function entity_workflow_field_extra_fields_alter(&$info) {
 
 /**
  * Implements hook_user_delete().
+ *
+ * @todo Test and amend if necessary
  */
 function entity_workflow_user_delete($account) {
   // Update tables for deleted account, move account to user 0 (anon.)
@@ -180,6 +188,8 @@ function entity_workflow_user_delete($account) {
 
 /**
  * Implements hook_tokens().
+ *
+ * @todo Test and amend if necessary
  */
 function entity_workflow_tokens($type, $tokens, array $data = array(), array $options = array()) {
   $values = array();
@@ -253,6 +263,7 @@ function entity_workflow_tokens($type, $tokens, array $data = array(), array $op
 
 /**
  * Implements hook_token_info().
+ * @todo Test and amend if necessary
  */
 function entity_workflow_token_info() {
   $type = array(
@@ -311,7 +322,7 @@ function entity_workflow_token_info() {
  */
 
 /**
- * Implements hook_node_load(). Consider replacing with hook_entity_load().
+ * Implements hook_node_load().
  */
 function entity_workflow_entity_load($entities, $type) {
 
@@ -323,8 +334,6 @@ function entity_workflow_entity_load($entities, $type) {
     // have been standardized to entity_workflow_x, dropping the initial underscore.
     // Module maintainers integrating with workflow should keep that in mind.
     $entity->workflow = entity_workflow_entity_current_state($entity);
-
-    // I have had to manually set the entity's type here as I cannot find any other way to access this property
 
     // Add scheduling information.
     // Technically you could have more than one scheduled, but this will only add the soonest one.
@@ -402,6 +411,8 @@ function entity_workflow_entity_delete($entity) {
 
 /**
  * Implements hook_comment_insert().
+ *
+ * @todo Test and amend if necessary
  */
 function entity_workflow_comment_insert($comment) {
   entity_workflow_comment_update($comment);
@@ -409,6 +420,8 @@ function entity_workflow_comment_insert($comment) {
 
 /**
  * Implements hook_comment_update().
+ *
+ * @todo Test and amend if necessary
  */
 function entity_workflow_comment_update($comment) {
   if (isset($comment->workflow)) {
@@ -430,6 +443,8 @@ function entity_workflow_comment_update($comment) {
 
 /**
  * Implements hook_features_api().
+ *
+ * @todo Test and amend if necessary
  */
 function entity_workflow_features_api() {
   return array(
@@ -530,6 +545,8 @@ function entity_workflow_transition($entity, $sid) {
  *   The state ID of the current state, used as the default value.
  * @param $choices
  *   An array of possible target states.
+ *
+ * @todo Test and amend if necessary
  */
 function entity_workflow_entity_form(&$form, $form_state, $title, $name, $current, $choices, $timestamp = NULL, $comment = NULL) {
   // No sense displaying choices if there is only one choice.
@@ -599,6 +616,8 @@ function entity_workflow_entity_form(&$form, $form_state, $title, $name, $curren
  *
  * @param object &$node
  * @return array
+ *
+ * @todo Test and amend if necessary
  */
 function entity_workflow_form_alter(&$form, &$form_state, $form_id) {
   // Ignore all forms except comment forms and node editing forms.
